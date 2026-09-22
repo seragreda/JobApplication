@@ -113,39 +113,6 @@ JobApplication.Application/
             └── GetApplicationsByJob/
 ```
 
----
-
-## Setup
-
-1. Clone the repo:
-```bash
-git clone https://github.com/BahaaDagher/JobApplication.API.git
-```
-
-2. Update `appsettings.json` connection string:
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=.;Database=JobApplicationDb;Trusted_Connection=True;TrustServerCertificate=True;"
-}
-```
-
-3. Apply migrations:
-```bash
-dotnet ef database update -p JobApplication.Infrastructure -s JobApplication.API
-```
-
-4. Run:
-```bash
-dotnet run --project JobApplication.API
-```
-
-5. Open Scalar:
-```
-https://localhost:52835/scalar/v1
-```
-
----
-
 ## Default Accounts
 
 | Role | Email | Password |
