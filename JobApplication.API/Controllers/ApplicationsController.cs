@@ -1,6 +1,10 @@
 using JobApplication.Application.DTOs.Applications;
-using JobApplication.Application.Services.Interfaces;
+using JobApplication.Application.Features.JobCandidateApplications.Commands.ApplyToJob;
+using JobApplication.Application.Features.JobCandidateApplications.Commands.CancelApplication;
+using JobApplication.Application.Features.JobCandidateApplications.Commands.UpdateApplicationStatus;
+using JobApplication.Application.Features.JobCandidateApplications.Queries.GetApplicationsByJob;
 using JobApplication.Domain.Common;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,15 +15,15 @@ namespace JobApplication.API.Controllers;
 [Authorize]
 public class ApplicationsController : ControllerBase
 {
-    private readonly IApplicationService _apps;
+    private readonly IMediator _mediator;
 
-    public ApplicationsController(IApplicationService apps) => _apps = apps;
+    public ApplicationsController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost]
     [Authorize(Roles = "Candidate")]
     public async Task<IActionResult> Apply(ApplyToJobDto dto)
     {
-        var result = await _apps.ApplyAsync(dto);
+        var result = await _mediator.Send(new ApplyToJobCommand(dto.JobId, dto.CvUrl));
         if (!result.IsSuccess) return ToActionResult(result);
         return Ok(new { id = result.Value });
     }
@@ -27,12 +31,17 @@ public class ApplicationsController : ControllerBase
     [HttpPut("{id:int}/status")]
     [Authorize(Roles = "Recruiter")]
     public async Task<IActionResult> UpdateStatus(int id, UpdateApplicationStatusDto dto)
-        => ToActionResult(await _apps.UpdateStatusAsync(id, dto));
+        => ToActionResult(await _mediator.Send(new UpdateApplicationStatusCommand(id, dto.NewStatus)));
 
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Candidate")]
     public async Task<IActionResult> Cancel(int id)
-        => ToActionResult(await _apps.CancelAsync(id));
+        => ToActionResult(await _mediator.Send(new CancelApplicationCommand(id)));
+
+    [HttpGet("job/{jobId:int}")]
+    [Authorize(Roles = "Recruiter")]
+    public async Task<IActionResult> GetByJob(int jobId)
+        => Ok(await _mediator.Send(new GetApplicationsByJobQuery(jobId)));
 
     private IActionResult ToActionResult<T>(Result<T> result)
     {

@@ -1,6 +1,9 @@
 using JobApplication.Application.DTOs.Auth;
-using JobApplication.Application.Services.Interfaces;
+using JobApplication.Application.Features.Auth.Commands.Login;
+using JobApplication.Application.Features.Auth.Commands.Register;
+using JobApplication.Application.Features.Auth.Commands.RegisterRecruiter;
 using JobApplication.Domain.Common;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobApplication.API.Controllers;
@@ -9,29 +12,36 @@ namespace JobApplication.API.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthService _auth;
+    private readonly IMediator _mediator;
 
-    public AuthController(IAuthService auth) => _auth = auth;
+    public AuthController(IMediator mediator) => _mediator = mediator;
 
-    /// <summary>Register as a Candidate (default).</summary>
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDto dto)
-        => ToActionResult(await _auth.RegisterAsync(dto));
+    {
+        var result = await _mediator.Send(new RegisterCommand(dto.Email, dto.Password, dto.Name));
+        return ToActionResult(result);
+    }
 
-    /// <summary>Register as a Recruiter — requires invitation code.</summary>
     [HttpPost("register-recruiter")]
     public async Task<IActionResult> RegisterRecruiter(RegisterRecruiterDto dto)
-        => ToActionResult(await _auth.RegisterRecruiterAsync(dto));
+    {
+        var result = await _mediator.Send(new RegisterRecruiterCommand(
+            dto.Register.Email, dto.Register.Password, dto.Register.Name,
+            dto.CompanyName, dto.InvitationCode));
+        return ToActionResult(result);
+    }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto dto)
-        => ToActionResult(await _auth.LoginAsync(dto));
+    {
+        var result = await _mediator.Send(new LoginCommand(dto.Email, dto.Password));
+        return ToActionResult(result);
+    }
 
     private IActionResult ToActionResult<T>(Result<T> result)
     {
-        if (result.IsSuccess)
-            return Ok(new { data = result.Value });
-
+        if (result.IsSuccess) return Ok(new { data = result.Value });
         return result.ErrorType switch
         {
             ErrorType.NotFound => NotFound(new { error = result.Error }),

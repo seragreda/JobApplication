@@ -2,28 +2,38 @@ using System.Text;
 using JobApplication.API.Middleware;
 using JobApplication.API.Services;
 using JobApplication.Application.Common.Interfaces;
-using JobApplication.Application.Services;
-using JobApplication.Application.Services.Interfaces;
 using JobApplication.Infrastructure;
 using JobApplication.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
+using FluentValidation;
+using JobApplication.Application;
+using JobApplication.Application.Common.Behaviors;
+using MediatR;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(AssemblyReference.Assembly);
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+});
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 
 // Infrastructure (EF Core, Identity, Repos, UoW)
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Application services
-builder.Services.AddScoped<IJobService, JobService>();
-builder.Services.AddScoped<IApplicationService, ApplicationService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+//builder.Services.AddScoped<IJobService, JobService>();
+//builder.Services.AddScoped<IApplicationService, ApplicationService>();
+//builder.Services.AddScoped<IAuthService, AuthService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]
