@@ -1,3 +1,4 @@
+using Hangfire;
 using JobApplication.Application.Common.Interfaces;
 using JobApplication.Domain.Common;
 using JobApplication.Domain.Enums;
@@ -43,6 +44,9 @@ public class CancelApplicationCommandHandler : IRequestHandler<CancelApplication
 
         _uow.Applications.Update(application);
         await _uow.SaveChangesAsync();
+
+        var applicationId = application.Id;
+        BackgroundJob.Enqueue<INotificationService>(x => x.NotifyCandidateAsync(applicationId));
 
         return Result.Success();
     }

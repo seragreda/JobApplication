@@ -1,18 +1,23 @@
-using System.Text;
+using FluentValidation;
+using Hangfire;
 using JobApplication.API.Middleware;
 using JobApplication.API.Services;
+using JobApplication.Application;
+using JobApplication.Application.Common.Behaviors;
 using JobApplication.Application.Common.Interfaces;
 using JobApplication.Infrastructure;
+using JobApplication.Infrastructure.Notifications;
 using JobApplication.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
-using FluentValidation;
-using JobApplication.Application;
-using JobApplication.Application.Common.Behaviors;
-using MediatR;
+using JobApplication.Infrastructure.BackgroundJobs;
+using Hangfire;
+using Hangfire.SqlServer;
 using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMediatR(cfg =>
@@ -26,6 +31,19 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
+builder.Services.AddScoped<INotificationService, EmailNotificationService>();
+// Hangfire
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddHangfireServer();
+
+builder.Services.AddScoped<CloseStaleJobsJob>();
+builder.Services.AddScoped<CleanupCancelledApplicationsJob>();
+builder.Services.AddScoped<DailyJobsReportJob>();
 
 // Infrastructure (EF Core, Identity, Repos, UoW)
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -112,6 +130,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseHangfireDashboard("/hangfire");
+RecurringJobsConfiguration.RegisterRecurringJobs();
 app.MapControllers();
 
 app.Run();

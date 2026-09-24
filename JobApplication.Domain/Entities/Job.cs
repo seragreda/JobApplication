@@ -12,6 +12,7 @@ public class Job
 
     public DateTime? ClosedAt { get; set; }
     public int? ClosedById { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<JobCandidateApplication> Applications { get; set; } = new List<JobCandidateApplication>();
 }
